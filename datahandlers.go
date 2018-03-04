@@ -165,6 +165,55 @@ func (src StreetAddress) write_info() {
 	log.Printf("%s (%s) %s (%s) %s\n", src.MunicipalityNameFi, src.MunicipalityCode, src.PostalCodeNameFi, src.PostalCode, src.StreetNameFi)
 }
 
+// Read file to array
+func GetStreetJSONArray(fn string) (data []StreetJSON) {
+	readbytes, err := ReadFileToByteArray(fn)
+	if err != nil {
+		panic(err)
+	}
+
+	err = json.Unmarshal(readbytes, &data)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", fn, err))
+		panic(err)
+	}
+
+	return data
+}
+
+// Read file to array
+func GetPostnumberJSONArray(fn string) (data []PostnumberJSON) {
+	readbytes, err := ReadFileToByteArray(fn)
+	if err != nil {
+		panic(err)
+	}
+
+	err = json.Unmarshal(readbytes, &data)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", fn, err))
+		panic(err)
+	}
+
+	return data
+}
+
+// Read file to array
+func GetMunicipalityJSONArray(fn string) (data []MunicipalityJSON) {
+	readbytes, err := ReadFileToByteArray(fn)
+	if err != nil {
+		panic(err)
+	}
+
+	err = json.Unmarshal(readbytes, &data)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", fn, err))
+		panic(err)
+	}
+
+	return data
+}
+
+
 // Write to file
 func (src StreetAddress) write_street(dir string) {
 
@@ -179,18 +228,7 @@ func (src StreetAddress) write_street(dir string) {
 
 	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "street.json")
 
-	var err error
-	readbytes, err := ReadFileToByteArray(filename)
-	if err != nil {
-		panic(err)
-	}
-
-	var data []StreetJSON
-	err = json.Unmarshal(readbytes, &data)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", filename, err))
-		panic(err)
-	}
+	var data []StreetJSON = GetStreetJSONArray(filename)
 
 	var found bool = false
 	for idx, k := range data {
@@ -213,7 +251,11 @@ func (src StreetAddress) write_street(dir string) {
 		panic(err)
 	}
 
-	ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
+	err = ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 // Write to file
@@ -226,18 +268,7 @@ func (src StreetAddress) write_postnumber(dir string) {
 
 	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "postnumber.json")
 
-	var err error
-	readbytes, err := ReadFileToByteArray(filename)
-	if err != nil {
-		panic(err)
-	}
-
-	var data []PostnumberJSON
-	err = json.Unmarshal(readbytes, &data)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", filename, err))
-		panic(err)
-	}
+	var data []PostnumberJSON = GetPostnumberJSONArray(filename)
 
 	var found bool = false
 	for idx, k := range data {
@@ -257,7 +288,10 @@ func (src StreetAddress) write_postnumber(dir string) {
 		panic(err)
 	}
 
-	ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
+	err = ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
+	if err != nil {
+		panic(err)
+	}
 
 }
 
@@ -271,19 +305,7 @@ func (src StreetAddress) write_municipality(dir string) {
 
 	filename := path.Join(dir, src.MunicipalityCode, "municipality.json")
 
-	var err error
-	readbytes, err := ReadFileToByteArray(filename)
-	if err != nil {
-		panic(err)
-	}
-
-	// Read JSON string to struct array
-	var data []MunicipalityJSON
-	err = json.Unmarshal(readbytes, &data)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", filename, err))
-		panic(err)
-	}
+	var data []MunicipalityJSON = GetMunicipalityJSONArray(filename)
 
 	var found bool = false
 	for idx, k := range data {
@@ -303,7 +325,10 @@ func (src StreetAddress) write_municipality(dir string) {
 		panic(err)
 	}
 
-	ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
+	err = ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
+	if err != nil {
+		panic(err)
+	}
 
 }
 

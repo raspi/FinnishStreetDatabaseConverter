@@ -4,7 +4,6 @@ import (
 	"path"
 	"encoding/json"
 	"log"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -162,57 +161,8 @@ func (src StreetAddress) NewMunicipalityJSON() MunicipalityJSON {
 
 // Possible debug info
 func (src StreetAddress) write_info() {
-	log.Printf("%s (%s) %s (%s) %s\n", src.MunicipalityNameFi, src.MunicipalityCode, src.PostalCodeNameFi, src.PostalCode, src.StreetNameFi)
+	//log.Printf("%s (%s) %s (%s) %s\n", src.MunicipalityNameFi, src.MunicipalityCode, src.PostalCodeNameFi, src.PostalCode, src.StreetNameFi)
 }
-
-// Read file to array
-func GetStreetJSONArray(fn string) (data []StreetJSON) {
-	readbytes, err := ReadFileToByteArray(fn)
-	if err != nil {
-		panic(err)
-	}
-
-	err = json.Unmarshal(readbytes, &data)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", fn, err))
-		panic(err)
-	}
-
-	return data
-}
-
-// Read file to array
-func GetPostnumberJSONArray(fn string) (data []PostnumberJSON) {
-	readbytes, err := ReadFileToByteArray(fn)
-	if err != nil {
-		panic(err)
-	}
-
-	err = json.Unmarshal(readbytes, &data)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", fn, err))
-		panic(err)
-	}
-
-	return data
-}
-
-// Read file to array
-func GetMunicipalityJSONArray(fn string) (data []MunicipalityJSON) {
-	readbytes, err := ReadFileToByteArray(fn)
-	if err != nil {
-		panic(err)
-	}
-
-	err = json.Unmarshal(readbytes, &data)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Filename: %[1]s Error: %[2]s (%[2]T)", fn, err))
-		panic(err)
-	}
-
-	return data
-}
-
 
 // Write to file
 func (src StreetAddress) write_street(dir string) {
@@ -221,14 +171,15 @@ func (src StreetAddress) write_street(dir string) {
 		return
 	}
 
-	var nums []int64 = []int64{src.SmallestBuilding.BuildingNumber1, src.SmallestBuilding.BuildingNumber2, src.HighestBuilding.BuildingNumber1, src.HighestBuilding.BuildingNumber2}
-	fmt.Printf("%v\n", nums)
-
 	src.write_info()
 
 	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "street.json")
 
-	var data []StreetJSON = GetStreetJSONArray(filename)
+	var data []StreetJSON
+	err := UnmarshalJSONFromFile(filename, &data)
+	if err != nil {
+		panic(err)
+	}
 
 	var found bool = false
 	for idx, k := range data {
@@ -268,7 +219,11 @@ func (src StreetAddress) write_postnumber(dir string) {
 
 	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "postnumber.json")
 
-	var data []PostnumberJSON = GetPostnumberJSONArray(filename)
+	var data []PostnumberJSON
+	err := UnmarshalJSONFromFile(filename, &data)
+	if err != nil {
+		panic(err)
+	}
 
 	var found bool = false
 	for idx, k := range data {
@@ -305,7 +260,11 @@ func (src StreetAddress) write_municipality(dir string) {
 
 	filename := path.Join(dir, src.MunicipalityCode, "municipality.json")
 
-	var data []MunicipalityJSON = GetMunicipalityJSONArray(filename)
+	var data []MunicipalityJSON
+	err := UnmarshalJSONFromFile(filename, &data)
+	if err != nil {
+		panic(err)
+	}
 
 	var found bool = false
 	for idx, k := range data {

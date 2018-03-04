@@ -6,7 +6,9 @@ import (
 	"os"
 	"strconv"
 	"path"
-	"io/ioutil"
+	"encoding/json"
+	"fmt"
+	"errors"
 )
 
 func StringToInt64(s string) int64 {
@@ -37,44 +39,6 @@ func StringToByte(s string) byte {
 	}
 
 	return 0
-}
-
-func CreateDirectories(dir string) bool {
-	err := os.MkdirAll(dir, os.FileMode(0700))
-	if err != nil {
-		panic(err)
-	}
-
-	return true
-}
-
-func ReadFileToByteArray(filepath string) ([]byte, error) {
-	CreateDirectories(path.Dir(filepath))
-
-	var err error
-
-	// create file if not exists
-	_, err = os.Stat(filepath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			file, err := os.Create(filepath)
-			if err != nil {
-				panic(err)
-			}
-
-			defer file.Close()
-			file.Write([]byte("[]"))
-		} else {
-			panic(err)
-		}
-	}
-
-	readbytes, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		panic(err)
-	}
-
-	return readbytes, err
 }
 
 func Min(x, y int64) int64 {
@@ -125,4 +89,54 @@ func GetMinMaxArray(arr []int64, filter int64) (min int64, max int64) {
 	}
 
 	return MinMaxArray(newarr)
+}
+
+// Read JSON file to struct
+func UnmarshalJSONFromFile(filepath string, v interface{}) (err error) {
+	err = os.MkdirAll(path.Dir(filepath), os.FileMode(0700))
+	if err != nil {
+		return err
+	}
+
+	// create file if not exists
+	_, err = os.Stat(filepath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			file, err := os.Create(filepath)
+			if err != nil {
+				return err
+			}
+
+			defer file.Close()
+
+			// Empty array
+			file.Write([]byte("[]"))
+		} else {
+			return err
+		}
+	}
+
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewDecoder(file).Decode(v)
+}
+
+func HasRequiredCommandLineArguments(required []string, seen map[string]bool) (err error) {
+	err = nil
+	var errs []string
+	for _, req := range required {
+		if !seen[req] {
+			errs = append(errs, fmt.Sprintf("Error: Missing required -%s argument/flag.", req))
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "\n"))
+	}
+
+	return err
 }

@@ -16,103 +16,104 @@ import (
 	"time"
 )
 
+// Basic Address File Record Description
 // Raw data
 type RawLineStructure struct {
-	Tietuetunnus              [5]byte  // 1, "KATUN"
-	Ajopvm                    [8]byte  // 2, numeric date yyyymmdd
-	Postinumero               [5]byte  // 3, numeric
-	Postinumeron_nimi_fi      [30]byte // 4
-	Postinumeron_nimi_se      [30]byte // 5
-	Postinumeron_lyhenne_fi   [12]byte // 6
-	Postinumeron_lyhenne_se   [12]byte // 7
-	Katu_fi                   [30]byte // 8
-	Katu_se                   [30]byte // 9
-	Tyhja1                    [12]byte // 10, empty
-	Tyhja2                    [12]byte // 11, empty
-	Kiinteistotietojen_tyyppi [1]byte  // 12
+	RecordIdentifier      [5]byte  // #1 Record identifier, "KATUN"
+	RunningDate           [8]byte  // #2 Running date, numeric date yyyymmdd
+	PostalCode            [5]byte  // #3 Postal code, numeric
+	PostalCodeNameFi      [30]byte // #4 Postal code name in Finnish
+	PostalCodeNameSe      [30]byte // #5 Postal code name in Swedish, optional
+	PostalCodeShortNameFi [12]byte // #6 Postal code name abbreviation in Finnish
+	PostalCodeShortNameSe [12]byte // #7 Postal code name abbreviation in Swedish, optional
+	StreetNameFi          [30]byte // #8 Street (location) name in Finnish
+	StreetNameSe          [30]byte // #9 Street (location) name in Swedish, optional
+	Blank1                [12]byte // #10 Blank
+	Blank2                [12]byte // #11 Blank
+	BuildingDataType      [1]byte  // #12 Building data type, 1 = odd 2 = even
 
-	// 13 skipped in doc
-	Pienin_numero1      [5]byte // 14
-	Pienin_jakokirjain1 [1]byte // 15
-	Pienin_valimerkki   [1]byte // 16
-	Pienin_numero2      [5]byte // 17
-	Pienin_jakokirjain2 [1]byte // 18
+	// #13 (skipped) Smallest building number (information about an odd/even building)
+	Smallest_BuildingNumber1         [5]byte // #14 Building number 1, optional
+	Smallest_BuildingDeliveryLetter1 [1]byte // #15 Building delivery letter 1, optional
+	Smallest_PunctuationMark         [1]byte // #16 Punctuation mark, optional
+	Smallest_BuildingNumber2         [5]byte // #17 Building number 2, optional
+	Smallest_BuildingDeliveryLetter2 [1]byte // #18 Building delivery letter 2, optional
 
-	// 19 skipped in doc
-	Suurin_numero1      [5]byte // 20
-	Suurin_jakokirjain1 [1]byte // 21
-	Suurin_valimerkki   [1]byte // 22
-	Suurin_numero2      [5]byte // 23
-	Suurin_jakokirjain2 [1]byte // 24
+	// #19 (skipped) Highest building number (information about an odd/even building)
+	Highest_BuildingNumber1         [5]byte // #20 Building number 1, optional
+	Highest_BuildingDeliveryLetter1 [1]byte // #21 Building delivery letter 1, optional
+	Highest_PunctuationMark         [1]byte // #22 Punctuation mark, optional
+	Highest_BuildingNumber2         [5]byte // #23 Building number 2, optional
+	Highest_BuildingDeliveryLetter2 [1]byte // #24 Building delivery letter 2, optional
 
-	Kunnan_koodi [3]byte  // 25, numeric
-	Kunta_fi     [20]byte // 26
-	Kunta_se     [20]byte // 27
+	MunicipalityCode   [3]byte  // #25 Municipality code, numeric
+	MunicipalityNameFi [20]byte // #26 Municipality name in Finnish
+	MunicipalityNameSe [20]byte // #27 Municipality name in Swedish, optional
 }
 
 // structured
-type EvenOdd uint8
+type EvenOdd uint8 // #12 Even / odd
 
+// #12 Even / odd
 const (
 	NOT_USED EvenOdd = 0
 	ODD      EvenOdd = 1
 	EVEN     EvenOdd = 2
 )
 
-type Kiinteisto struct {
-	Numero1      int64
-	Jakokirjain1 byte
-	Valimerkki   byte
-	Numero2      int64
-	Jakokirjain2 byte
+type Building struct {
+	BuildingNumber1         int64 // #14 & #20
+	BuildingDeliveryLetter1 byte  // #15 & #21
+	PunctuationMark         byte  // #16 & #22
+	BuildingNumber2         int64 // #17 & #23
+	BuildingDeliveryLetter2 byte  // #18 & #24
 }
 
 type StreetAddress struct {
-	//Tietuetunnus              string // 1
-	//Ajopvm                    string // 2
-	Postinumero             string // 3
-	Postinumeron_nimi_fi    string // 4
-	Postinumeron_nimi_se    string // 5
-	Postinumeron_lyhenne_fi string // 6
-	Postinumeron_lyhenne_se string // 7
-	Katu_fi                 string // 8
-	Katu_se                 string // 9
-	//Tyhja1                    string // 10
-	//Tyhja2                    string // 11
-	Kiinteistotietojen_tyyppi EvenOdd // 12
+	//RecordIdentifier              string // #1
+	//RunningDate                    string // #2
+	PostalCode            string // #3 Postal code, numeric
+	PostalCodeNameFi      string // #4 Postal code name in Finnish
+	PostalCodeNameSe      string // #5 Postal code name in Swedish
+	PostalCodeShortNameFi string // #6 Postal code name abbreviation in Finnish
+	PostalCodeShortNameSe string // #7 Postal code name abbreviation in Swedish
+	StreetNameFi          string // #8 Street (location) name in Finnish
+	StreetNameSe          string // #9 Street (location) name in Swedish
+	//Blank1                    string // #10 Blank
+	//Blank2                    string // #11 Blank
+	BuildingDataTypeEvenOdd EvenOdd // #12 Building data type, odd / even
 
-	Pienin Kiinteisto
-	Suurin Kiinteisto
+	SmallestBuilding Building
+	HighestBuilding  Building
 
-	Kunnan_koodi string // 25
-	Kunta_fi     string // 26
-	Kunta_se     string // 27
+	MunicipalityCode   string // #25 Municipality code, numeric
+	MunicipalityNameFi string // #26 Municipality name in Finnish
+	MunicipalityNameSe string // #27 Municipality name in Swedish
 }
 
 // JSON structures
 
 type StreetJSON struct {
-	Fi string `json:"fi,omitempty"`
-	Se string `json:"se,omitempty"`
-	Min int64 `json:"min,omitempty"`
-	Max int64 `json:"max,omitempty"`
+	Fi  string `json:"fi,omitempty"`  // Street name in Finnish
+	Se  string `json:"se,omitempty"`  // Street name in Swedish
+	Min int64  `json:"min,omitempty"` // Minimum number
+	Max int64  `json:"max,omitempty"` // Maximum number
 }
 
 type PostnumberJSON struct {
-	Fi string `json:"fi,omitempty"`
-	Se string `json:"se,omitempty"`
-	FiLyh string `json:"fil,omitempty"`
-	SeLyh string `json:"sel,omitempty"`
+	Fi    string `json:"fi,omitempty"`  // Post number name in Finnish
+	Se    string `json:"se,omitempty"`  // Post number name in Swedish
+	FiLyh string `json:"fil,omitempty"` // Shortened post number name in Finnish
+	SeLyh string `json:"sel,omitempty"` // Shortened post number name in Swedish
 }
 
 type MunicipalityJSON struct {
-	Fi string `json:"fi,omitempty"`
-	Se string `json:"se,omitempty"`
+	Fi string `json:"fi,omitempty"` // Municipality name in Finnish
+	Se string `json:"se,omitempty"` // Municipality name in Swedish
 }
 
-
 // Converters
-func strToConst(s string) EvenOdd {
+func StringToEvenOddConst(s string) EvenOdd {
 	if s == "1" {
 		return ODD
 	} else if s == "2" {
@@ -122,59 +123,67 @@ func strToConst(s string) EvenOdd {
 	}
 }
 
-func (posti StreetAddress) StreetNumberMinMax(arr []int64) (min int64, max int64) {
-	var nums []int64 = []int64{posti.Pienin.Numero1, posti.Pienin.Numero2, posti.Suurin.Numero1, posti.Suurin.Numero2}
+// Find min and max building number
+func (src StreetAddress) StreetNumberMinMax(arr []int64) (min int64, max int64) {
+	var nums []int64 = []int64{src.SmallestBuilding.BuildingNumber1, src.SmallestBuilding.BuildingNumber2, src.HighestBuilding.BuildingNumber1, src.HighestBuilding.BuildingNumber2}
 	nums = append(nums, arr...)
 	return GetMinMaxArray(nums, -1)
 }
 
-func (posti StreetAddress) NewStreetJSON() StreetJSON {
-	min,max := posti.StreetNumberMinMax([]int64{})
+// Street address JSON
+func (src StreetAddress) NewStreetJSON() StreetJSON {
+	min, max := src.StreetNumberMinMax([]int64{})
 
 	return StreetJSON{
-		Fi: posti.Katu_fi,
-		Se: posti.Katu_se,
+		Fi:  src.StreetNameFi,
+		Se:  src.StreetNameSe,
 		Min: min,
 		Max: max,
 	}
 }
 
-func (posti StreetAddress) NewPostnumberJSON() PostnumberJSON {
+// Post number 
+func (src StreetAddress) NewPostnumberJSON() PostnumberJSON {
 	return PostnumberJSON{
-		Fi: posti.Postinumeron_nimi_fi,
-		Se: posti.Postinumeron_nimi_se,
-		FiLyh:posti.Postinumeron_lyhenne_fi,
-		SeLyh:posti.Postinumeron_lyhenne_se,
+		Fi:    src.PostalCodeNameFi,
+		Se:    src.PostalCodeNameSe,
+		FiLyh: src.PostalCodeShortNameFi,
+		SeLyh: src.PostalCodeShortNameSe,
 	}
 }
 
-func (posti StreetAddress) NewMunicipalityJSON() MunicipalityJSON {
+// Municipality
+func (src StreetAddress) NewMunicipalityJSON() MunicipalityJSON {
 	return MunicipalityJSON{
-		Fi: posti.Kunta_fi,
-		Se: posti.Kunta_se,
+		Fi: src.MunicipalityNameFi,
+		Se: src.MunicipalityNameSe,
 	}
 }
 
-
-func (posti StreetAddress) write_info() {
-	//log.Printf("%s (%s) %s (%s) %s\n", posti.Kunta_fi, posti.Kunnan_koodi, posti.Postinumeron_nimi_fi, posti.Postinumero, posti.Katu_fi)
+// Possible debug info
+func (src StreetAddress) write_info() {
+	log.Printf("%s (%s) %s (%s) %s\n", src.MunicipalityNameFi, src.MunicipalityCode, src.PostalCodeNameFi, src.PostalCode, src.StreetNameFi)
 }
 
-func (posti StreetAddress) write_street(dir string) {
+// Write to file
+func (src StreetAddress) write_street(dir string) {
 
-	if posti.Katu_fi == "" {
+	if src.StreetNameFi == "" {
 		return
 	}
 
-	var nums []int64 = []int64{posti.Pienin.Numero1, posti.Pienin.Numero2, posti.Suurin.Numero1, posti.Suurin.Numero2}
+	var nums []int64 = []int64{src.SmallestBuilding.BuildingNumber1, src.SmallestBuilding.BuildingNumber2, src.HighestBuilding.BuildingNumber1, src.HighestBuilding.BuildingNumber2}
 	fmt.Printf("%v\n", nums)
 
-	posti.write_info()
+	src.write_info()
 
-	filename := path.Join(dir, posti.Kunnan_koodi, posti.Postinumero, "street.json")
+	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "street.json")
 
 	var err error
 	readbytes, err := ReadFileToByteArray(filename)
+	if err != nil {
+		panic(err)
+	}
 
 	var data []StreetJSON
 	err = json.Unmarshal(readbytes, &data)
@@ -185,8 +194,8 @@ func (posti StreetAddress) write_street(dir string) {
 
 	var found bool = false
 	for idx, k := range data {
-		if k.Fi == posti.Katu_fi {
-			min,max := posti.StreetNumberMinMax([]int64{k.Min, k.Max})
+		if k.Fi == src.StreetNameFi {
+			min, max := src.StreetNumberMinMax([]int64{k.Min, k.Max})
 			k.Min = min
 			k.Max = max
 			data[idx] = k
@@ -196,7 +205,7 @@ func (posti StreetAddress) write_street(dir string) {
 	}
 
 	if !found {
-		data = append(data, posti.NewStreetJSON())
+		data = append(data, src.NewStreetJSON())
 	}
 
 	writebytes, err := json.Marshal(data)
@@ -207,17 +216,21 @@ func (posti StreetAddress) write_street(dir string) {
 	ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
 }
 
-func (posti StreetAddress) write_postnumber(dir string) {
-	if posti.Postinumeron_nimi_fi == "" {
+// Write to file
+func (src StreetAddress) write_postnumber(dir string) {
+	if src.PostalCodeNameFi == "" {
 		return
 	}
 
-	posti.write_info()
+	src.write_info()
 
-	filename := path.Join(dir, posti.Kunnan_koodi, posti.Postinumero, "postnumber.json")
+	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "postnumber.json")
 
 	var err error
 	readbytes, err := ReadFileToByteArray(filename)
+	if err != nil {
+		panic(err)
+	}
 
 	var data []PostnumberJSON
 	err = json.Unmarshal(readbytes, &data)
@@ -228,7 +241,7 @@ func (posti StreetAddress) write_postnumber(dir string) {
 
 	var found bool = false
 	for idx, k := range data {
-		if k.Fi == posti.Postinumeron_nimi_fi {
+		if k.Fi == src.PostalCodeNameFi {
 			data[idx] = k
 			found = true
 			break
@@ -236,7 +249,7 @@ func (posti StreetAddress) write_postnumber(dir string) {
 	}
 
 	if !found {
-		data = append(data, posti.NewPostnumberJSON())
+		data = append(data, src.NewPostnumberJSON())
 	}
 
 	writebytes, err := json.Marshal(data)
@@ -248,18 +261,23 @@ func (posti StreetAddress) write_postnumber(dir string) {
 
 }
 
-func (posti StreetAddress) write_municipality(dir string) {
-	if posti.Kunta_fi == "" {
+// Write to file
+func (src StreetAddress) write_municipality(dir string) {
+	if src.MunicipalityNameFi == "" {
 		return
 	}
 
-	posti.write_info()
+	src.write_info()
 
-	filename := path.Join(dir, posti.Kunnan_koodi, "municipality.json")
+	filename := path.Join(dir, src.MunicipalityCode, "municipality.json")
 
 	var err error
 	readbytes, err := ReadFileToByteArray(filename)
+	if err != nil {
+		panic(err)
+	}
 
+	// Read JSON string to struct array
 	var data []MunicipalityJSON
 	err = json.Unmarshal(readbytes, &data)
 	if err != nil {
@@ -269,7 +287,7 @@ func (posti StreetAddress) write_municipality(dir string) {
 
 	var found bool = false
 	for idx, k := range data {
-		if k.Fi == posti.Kunta_fi {
+		if k.Fi == src.MunicipalityNameFi {
 			data[idx] = k
 			found = true
 			break
@@ -277,7 +295,7 @@ func (posti StreetAddress) write_municipality(dir string) {
 	}
 
 	if !found {
-		data = append(data, posti.NewMunicipalityJSON())
+		data = append(data, src.NewMunicipalityJSON())
 	}
 
 	writebytes, err := json.Marshal(data)
@@ -289,8 +307,8 @@ func (posti StreetAddress) write_municipality(dir string) {
 
 }
 
-
-func convertfile(sourcefile string, targetdir string){
+// Convert file to multiple JSON files
+func ConvertFile(sourcefile string, targetdir string) {
 
 	var err error
 
@@ -344,42 +362,43 @@ func convertfile(sourcefile string, targetdir string){
 
 		// Convert to proper structs
 
-		pienin := Kiinteisto{
-			Numero1:      StringToInt64(BytesToString(raw.Pienin_numero1[:], converter)),     // 14
-			Jakokirjain1: StringToByte(BytesToString(raw.Pienin_jakokirjain1[:], converter)), // 15
-			Valimerkki:   StringToByte(BytesToString(raw.Pienin_valimerkki[:], converter)),   // 16
-			Numero2:      StringToInt64(BytesToString(raw.Pienin_numero2[:], converter)),     // 17
-			Jakokirjain2: StringToByte(BytesToString(raw.Pienin_jakokirjain2[:], converter)), // 18
+		smallest := Building{
+			BuildingNumber1:         StringToInt64(BytesToString(raw.Smallest_BuildingNumber1[:], converter)),        // 14
+			BuildingDeliveryLetter1: StringToByte(BytesToString(raw.Smallest_BuildingDeliveryLetter1[:], converter)), // 15
+			PunctuationMark:         StringToByte(BytesToString(raw.Smallest_PunctuationMark[:], converter)),         // 16
+			BuildingNumber2:         StringToInt64(BytesToString(raw.Smallest_BuildingNumber2[:], converter)),        // 17
+			BuildingDeliveryLetter2: StringToByte(BytesToString(raw.Smallest_BuildingDeliveryLetter2[:], converter)), // 18
 		}
 
-		suurin := Kiinteisto{
-			Numero1:      StringToInt64(BytesToString(raw.Suurin_numero1[:], converter)),     // 20
-			Jakokirjain1: StringToByte(BytesToString(raw.Suurin_jakokirjain1[:], converter)), // 21
-			Valimerkki:   StringToByte(BytesToString(raw.Suurin_valimerkki[:], converter)),   // 22
-			Numero2:      StringToInt64(BytesToString(raw.Suurin_numero2[:], converter)),     // 23
-			Jakokirjain2: StringToByte(BytesToString(raw.Suurin_jakokirjain2[:], converter)), // 24
+		highest := Building{
+			BuildingNumber1:         StringToInt64(BytesToString(raw.Highest_BuildingNumber1[:], converter)),        // 20
+			BuildingDeliveryLetter1: StringToByte(BytesToString(raw.Highest_BuildingDeliveryLetter1[:], converter)), // 21
+			PunctuationMark:         StringToByte(BytesToString(raw.Highest_PunctuationMark[:], converter)),         // 22
+			BuildingNumber2:         StringToInt64(BytesToString(raw.Highest_BuildingNumber2[:], converter)),        // 23
+			BuildingDeliveryLetter2: StringToByte(BytesToString(raw.Highest_BuildingDeliveryLetter2[:], converter)), // 24
 		}
 
 		p := StreetAddress{
-			Postinumero:               BytesToString(raw.Postinumero[:], converter),                              // 3
-			Postinumeron_nimi_fi:      strings.ToLower(BytesToString(raw.Postinumeron_nimi_fi[:], converter)),    // 4
-			Postinumeron_nimi_se:      strings.ToLower(BytesToString(raw.Postinumeron_nimi_se[:], converter)),    // 5
-			Postinumeron_lyhenne_fi:   strings.ToLower(BytesToString(raw.Postinumeron_lyhenne_fi[:], converter)), // 6
-			Postinumeron_lyhenne_se:   strings.ToLower(BytesToString(raw.Postinumeron_lyhenne_se[:], converter)), // 7
-			Katu_fi:                   strings.ToLower(BytesToString(raw.Katu_fi[:], converter)),                 // 8
-			Katu_se:                   strings.ToLower(BytesToString(raw.Katu_se[:], converter)),                 // 9
-			Kiinteistotietojen_tyyppi: strToConst(BytesToString(raw.Kiinteistotietojen_tyyppi[:], converter)),    // 12
-			Pienin:                    pienin,                                                                    // 14-18
-			Suurin:                    suurin,                                                                    // 20-24
-			Kunnan_koodi:              BytesToString(raw.Kunnan_koodi[:], converter),                             // 25
-			Kunta_fi:                  strings.ToLower(BytesToString(raw.Kunta_fi[:], converter)),                // 26
-			Kunta_se:                  strings.ToLower(BytesToString(raw.Kunta_se[:], converter)),                // 27
+			PostalCode:              BytesToString(raw.PostalCode[:], converter),                             // 3
+			PostalCodeNameFi:        strings.ToLower(BytesToString(raw.PostalCodeNameFi[:], converter)),      // 4
+			PostalCodeNameSe:        strings.ToLower(BytesToString(raw.PostalCodeNameSe[:], converter)),      // 5
+			PostalCodeShortNameFi:   strings.ToLower(BytesToString(raw.PostalCodeShortNameFi[:], converter)), // 6
+			PostalCodeShortNameSe:   strings.ToLower(BytesToString(raw.PostalCodeShortNameSe[:], converter)), // 7
+			StreetNameFi:            strings.ToLower(BytesToString(raw.StreetNameFi[:], converter)),          // 8
+			StreetNameSe:            strings.ToLower(BytesToString(raw.StreetNameSe[:], converter)),          // 9
+			BuildingDataTypeEvenOdd: StringToEvenOddConst(BytesToString(raw.BuildingDataType[:], converter)), // 12
+			SmallestBuilding:        smallest,                                                                // 14-18
+			HighestBuilding:         highest,                                                                 // 20-24
+			MunicipalityCode:        BytesToString(raw.MunicipalityCode[:], converter),                       // 25
+			MunicipalityNameFi:      strings.ToLower(BytesToString(raw.MunicipalityNameFi[:], converter)),    // 26
+			MunicipalityNameSe:      strings.ToLower(BytesToString(raw.MunicipalityNameSe[:], converter)),    // 27
 		}
 
 		p.write_street(targetdir)
 		p.write_postnumber(targetdir)
 		p.write_municipality(targetdir)
 
+		// Report stats
 		select {
 		case <-ticker.C:
 			percent := ( float64(sourceReadedBytes) * float64(100.0) ) / float64(sourceTotalSizeBytes)

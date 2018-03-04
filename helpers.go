@@ -118,9 +118,9 @@ func MinMaxArray(arr []int64) (min int64, max int64) {
 func GetMinMaxArray(arr []int64, filter int64) (min int64, max int64) {
 	var newarr []int64
 
-	for _,item := range arr{
-    	if item != filter {
-    		newarr = append(newarr, item)
+	for _, item := range arr {
+		if item != filter {
+			newarr = append(newarr, item)
 		}
 	}
 

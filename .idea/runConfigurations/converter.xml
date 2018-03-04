@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="converter" type="GoApplicationRunConfiguration" factoryName="Go Application" singleton="true">
+    <module name="FinnishStreetDatabaseParser" />
+    <working_directory value="$PROJECT_DIR$/" />
+    <go_parameters value="-i" />
+    <kind value="DIRECTORY" />
+    <filePath value="$PROJECT_DIR$/main.go" />
+    <package value="$PROJECT_DIR$" />
+    <directory value="$PROJECT_DIR$/" />
+    <output_directory value="$PROJECT_DIR$" />
+    <method />
+  </configuration>
+</component>

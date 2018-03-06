@@ -103,11 +103,10 @@ func UnmarshalJSONFromFile(filepath string, v interface{}) (err error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			file, err := os.Create(filepath)
+			defer file.Close()
 			if err != nil {
 				return err
 			}
-
-			defer file.Close()
 
 			// Empty array
 			file.Write([]byte("[]"))
@@ -117,10 +116,10 @@ func UnmarshalJSONFromFile(filepath string, v interface{}) (err error) {
 	}
 
 	file, err := os.Open(filepath)
+	defer file.Close()
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
 	return json.NewDecoder(file).Decode(v)
 }

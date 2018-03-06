@@ -45,7 +45,11 @@ func main() {
 	log.Printf("Output directory: '%s'", *outputdirectory)
 
 	starttime := time.Now().UTC()
-	ConvertFile(*sourcefile, *outputdirectory)
-	endtime := time.Now().UTC()
-	log.Printf("Took %s", endtime.Sub(starttime))
+
+	err = ConvertFile(*sourcefile, *outputdirectory)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: '%v'", err)
+	}
+
+	log.Printf("Took %s", time.Now().UTC().Sub(starttime))
 }

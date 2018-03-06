@@ -291,28 +291,67 @@ func (src StreetAddress) write_municipality(dir string) {
 
 }
 
+func(src *RawLineStructure) ToStreet(converter *iconv.Converter) StreetAddress {
+	smallest := Building{
+		BuildingNumber1:         StringToInt64(BytesToString(src.Smallest_BuildingNumber1[:], converter)),        // 14
+		BuildingDeliveryLetter1: StringToByte(BytesToString(src.Smallest_BuildingDeliveryLetter1[:], converter)), // 15
+		PunctuationMark:         StringToByte(BytesToString(src.Smallest_PunctuationMark[:], converter)),         // 16
+		BuildingNumber2:         StringToInt64(BytesToString(src.Smallest_BuildingNumber2[:], converter)),        // 17
+		BuildingDeliveryLetter2: StringToByte(BytesToString(src.Smallest_BuildingDeliveryLetter2[:], converter)), // 18
+	}
+
+	highest := Building{
+		BuildingNumber1:         StringToInt64(BytesToString(src.Highest_BuildingNumber1[:], converter)),        // 20
+		BuildingDeliveryLetter1: StringToByte(BytesToString(src.Highest_BuildingDeliveryLetter1[:], converter)), // 21
+		PunctuationMark:         StringToByte(BytesToString(src.Highest_PunctuationMark[:], converter)),         // 22
+		BuildingNumber2:         StringToInt64(BytesToString(src.Highest_BuildingNumber2[:], converter)),        // 23
+		BuildingDeliveryLetter2: StringToByte(BytesToString(src.Highest_BuildingDeliveryLetter2[:], converter)), // 24
+	}
+
+	p := StreetAddress{
+		PostalCode:              BytesToString(src.PostalCode[:], converter),                             // 3
+		PostalCodeNameFi:        strings.ToLower(BytesToString(src.PostalCodeNameFi[:], converter)),      // 4
+		PostalCodeNameSe:        strings.ToLower(BytesToString(src.PostalCodeNameSe[:], converter)),      // 5
+		PostalCodeShortNameFi:   strings.ToLower(BytesToString(src.PostalCodeShortNameFi[:], converter)), // 6
+		PostalCodeShortNameSe:   strings.ToLower(BytesToString(src.PostalCodeShortNameSe[:], converter)), // 7
+		StreetNameFi:            strings.ToLower(BytesToString(src.StreetNameFi[:], converter)),          // 8
+		StreetNameSe:            strings.ToLower(BytesToString(src.StreetNameSe[:], converter)),          // 9
+		BuildingDataTypeEvenOdd: StringToEvenOddConst(BytesToString(src.BuildingDataType[:], converter)), // 12
+		SmallestBuilding:        smallest,                                                                // 14-18
+		HighestBuilding:         highest,                                                                 // 20-24
+		MunicipalityCode:        BytesToString(src.MunicipalityCode[:], converter),                       // 25
+		MunicipalityNameFi:      strings.ToLower(BytesToString(src.MunicipalityNameFi[:], converter)),    // 26
+		MunicipalityNameSe:      strings.ToLower(BytesToString(src.MunicipalityNameSe[:], converter)),    // 27
+	}
+
+	return p
+}
+
 // Convert file to multiple JSON files
-func ConvertFile(sourcefile string, targetdir string) {
-
-	var err error
-
+func ConvertFile(sourcefile string, targetdir string) (err error){
 	converter, err := iconv.NewConverter("iso-8859-1", "utf-8")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	f, err := os.Open(sourcefile)
-
-	if err != nil {
-		panic(err)
-	}
-
 	defer f.Close()
 
-	buffer := make([]byte, 256)
+	if err != nil {
+		return err
+	}
+
+
+	var raw RawLineStructure
+
+	buffer := make([]byte, binary.Size(raw))
 	nl := make([]byte, 1) // new line
 
 	finfo, err := f.Stat()
+	if err != nil {
+		return err
+	}
+
 	var sourceTotalSizeBytes int64 = finfo.Size()
 	var sourceReadedBytes int64 = 0
 
@@ -321,62 +360,34 @@ func ConvertFile(sourcefile string, targetdir string) {
 	defer ticker.Stop()
 
 	for {
-		var raw RawLineStructure
 
 		_, err := f.Read(buffer)
 		if err != nil {
 			if err == io.EOF {
 				break
 			} else {
-				panic(err)
+				return err
 			}
 		}
 
 		// Read from file
 		r := bytes.NewReader(buffer)
 		pos, err := f.Seek(0, io.SeekCurrent)
+		if err != nil {
+			return err
+		}
 
 		sourceReadedBytes = pos
 
 		// Read to struct
 		err = binary.Read(r, binary.BigEndian, &raw)
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		// Convert to proper structs
 
-		smallest := Building{
-			BuildingNumber1:         StringToInt64(BytesToString(raw.Smallest_BuildingNumber1[:], converter)),        // 14
-			BuildingDeliveryLetter1: StringToByte(BytesToString(raw.Smallest_BuildingDeliveryLetter1[:], converter)), // 15
-			PunctuationMark:         StringToByte(BytesToString(raw.Smallest_PunctuationMark[:], converter)),         // 16
-			BuildingNumber2:         StringToInt64(BytesToString(raw.Smallest_BuildingNumber2[:], converter)),        // 17
-			BuildingDeliveryLetter2: StringToByte(BytesToString(raw.Smallest_BuildingDeliveryLetter2[:], converter)), // 18
-		}
-
-		highest := Building{
-			BuildingNumber1:         StringToInt64(BytesToString(raw.Highest_BuildingNumber1[:], converter)),        // 20
-			BuildingDeliveryLetter1: StringToByte(BytesToString(raw.Highest_BuildingDeliveryLetter1[:], converter)), // 21
-			PunctuationMark:         StringToByte(BytesToString(raw.Highest_PunctuationMark[:], converter)),         // 22
-			BuildingNumber2:         StringToInt64(BytesToString(raw.Highest_BuildingNumber2[:], converter)),        // 23
-			BuildingDeliveryLetter2: StringToByte(BytesToString(raw.Highest_BuildingDeliveryLetter2[:], converter)), // 24
-		}
-
-		p := StreetAddress{
-			PostalCode:              BytesToString(raw.PostalCode[:], converter),                             // 3
-			PostalCodeNameFi:        strings.ToLower(BytesToString(raw.PostalCodeNameFi[:], converter)),      // 4
-			PostalCodeNameSe:        strings.ToLower(BytesToString(raw.PostalCodeNameSe[:], converter)),      // 5
-			PostalCodeShortNameFi:   strings.ToLower(BytesToString(raw.PostalCodeShortNameFi[:], converter)), // 6
-			PostalCodeShortNameSe:   strings.ToLower(BytesToString(raw.PostalCodeShortNameSe[:], converter)), // 7
-			StreetNameFi:            strings.ToLower(BytesToString(raw.StreetNameFi[:], converter)),          // 8
-			StreetNameSe:            strings.ToLower(BytesToString(raw.StreetNameSe[:], converter)),          // 9
-			BuildingDataTypeEvenOdd: StringToEvenOddConst(BytesToString(raw.BuildingDataType[:], converter)), // 12
-			SmallestBuilding:        smallest,                                                                // 14-18
-			HighestBuilding:         highest,                                                                 // 20-24
-			MunicipalityCode:        BytesToString(raw.MunicipalityCode[:], converter),                       // 25
-			MunicipalityNameFi:      strings.ToLower(BytesToString(raw.MunicipalityNameFi[:], converter)),    // 26
-			MunicipalityNameSe:      strings.ToLower(BytesToString(raw.MunicipalityNameSe[:], converter)),    // 27
-		}
+		p := raw.ToStreet(converter)
 
 		p.write_street(targetdir)
 		p.write_postnumber(targetdir)
@@ -397,14 +408,15 @@ func ConvertFile(sourcefile string, targetdir string) {
 			if err == io.EOF {
 				break
 			} else {
-				panic(err)
+				return err
 			}
 		}
 
 		if nl[0] != '\n' {
-			panic(errors.New("Not newline"))
+			return errors.New("Not newline")
 		}
 
 	}
 
+	return nil
 }

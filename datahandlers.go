@@ -32,18 +32,18 @@ type RawLineStructure struct {
 	BuildingDataType      [1]byte  // #12 Building data type, 1 = odd 2 = even
 
 	// #13 (skipped) Smallest building number (information about an odd/even building)
-	Smallest_BuildingNumber1         [5]byte // #14 Building number 1, optional
-	Smallest_BuildingDeliveryLetter1 [1]byte // #15 Building delivery letter 1, optional
-	Smallest_PunctuationMark         [1]byte // #16 Punctuation mark, optional
-	Smallest_BuildingNumber2         [5]byte // #17 Building number 2, optional
-	Smallest_BuildingDeliveryLetter2 [1]byte // #18 Building delivery letter 2, optional
+	SmallestBuildingNumber1         [5]byte // #14 Building number 1, optional
+	SmallestBuildingDeliveryLetter1 [1]byte // #15 Building delivery letter 1, optional
+	SmallestPunctuationMark         [1]byte // #16 Punctuation mark, optional
+	SmallestBuildingNumber2         [5]byte // #17 Building number 2, optional
+	SmallestBuildingDeliveryLetter2 [1]byte // #18 Building delivery letter 2, optional
 
 	// #19 (skipped) Highest building number (information about an odd/even building)
-	Highest_BuildingNumber1         [5]byte // #20 Building number 1, optional
-	Highest_BuildingDeliveryLetter1 [1]byte // #21 Building delivery letter 1, optional
-	Highest_PunctuationMark         [1]byte // #22 Punctuation mark, optional
-	Highest_BuildingNumber2         [5]byte // #23 Building number 2, optional
-	Highest_BuildingDeliveryLetter2 [1]byte // #24 Building delivery letter 2, optional
+	HighestBuildingNumber1         [5]byte // #20 Building number 1, optional
+	HighestBuildingDeliveryLetter1 [1]byte // #21 Building delivery letter 1, optional
+	HighestPunctuationMark         [1]byte // #22 Punctuation mark, optional
+	HighestBuildingNumber2         [5]byte // #23 Building number 2, optional
+	HighestBuildingDeliveryLetter2 [1]byte // #24 Building delivery letter 2, optional
 
 	MunicipalityCode   [3]byte  // #25 Municipality code, numeric
 	MunicipalityNameFi [20]byte // #26 Municipality name in Finnish
@@ -55,9 +55,9 @@ type EvenOdd uint8 // #12 Even / odd
 
 // #12 Even / odd
 const (
-	NOT_USED EvenOdd = 0
-	ODD      EvenOdd = 1
-	EVEN     EvenOdd = 2
+	NOTUSED EvenOdd = 0
+	ODD     EvenOdd = 1
+	EVEN    EvenOdd = 2
 )
 
 type Building struct {
@@ -118,15 +118,15 @@ func StringToEvenOddConst(s string) EvenOdd {
 	} else if s == "2" {
 		return EVEN
 	} else {
-		return NOT_USED
+		return NOTUSED
 	}
 }
 
 // Find min and max building number
 func (src StreetAddress) StreetNumberMinMax(arr []int64) (min int64, max int64) {
-	var nums []int64 = []int64{src.SmallestBuilding.BuildingNumber1, src.SmallestBuilding.BuildingNumber2, src.HighestBuilding.BuildingNumber1, src.HighestBuilding.BuildingNumber2}
-	nums = append(nums, arr...)
-	return GetMinMaxArray(nums, -1)
+	var numbers = []int64{src.SmallestBuilding.BuildingNumber1, src.SmallestBuilding.BuildingNumber2, src.HighestBuilding.BuildingNumber1, src.HighestBuilding.BuildingNumber2}
+	numbers = append(numbers, arr...)
+	return GetMinMaxArray(numbers, -1)
 }
 
 // Street address JSON
@@ -160,18 +160,18 @@ func (src StreetAddress) NewMunicipalityJSON() MunicipalityJSON {
 }
 
 // Possible debug info
-func (src StreetAddress) write_info() {
+func (src StreetAddress) writeInfo() {
 	//log.Printf("%s (%s) %s (%s) %s\n", src.MunicipalityNameFi, src.MunicipalityCode, src.PostalCodeNameFi, src.PostalCode, src.StreetNameFi)
 }
 
 // Write to file
-func (src StreetAddress) write_street(dir string) {
+func (src StreetAddress) writeStreet(dir string) {
 
 	if src.StreetNameFi == "" {
 		return
 	}
 
-	src.write_info()
+	src.writeInfo()
 
 	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "street.json")
 
@@ -181,7 +181,7 @@ func (src StreetAddress) write_street(dir string) {
 		panic(err)
 	}
 
-	var found bool = false
+	var found = false
 	for idx, k := range data {
 		if k.Fi == src.StreetNameFi {
 			min, max := src.StreetNumberMinMax([]int64{k.Min, k.Max})
@@ -197,12 +197,12 @@ func (src StreetAddress) write_street(dir string) {
 		data = append(data, src.NewStreetJSON())
 	}
 
-	writebytes, err := json.Marshal(data)
+	writeBytes, err := json.Marshal(data)
 	if err != nil {
 		panic(err)
 	}
 
-	err = ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
+	err = ioutil.WriteFile(filename, writeBytes, os.FileMode(0600))
 	if err != nil {
 		panic(err)
 	}
@@ -210,12 +210,12 @@ func (src StreetAddress) write_street(dir string) {
 }
 
 // Write to file
-func (src StreetAddress) write_postnumber(dir string) {
+func (src StreetAddress) writePostnumber(dir string) {
 	if src.PostalCodeNameFi == "" {
 		return
 	}
 
-	src.write_info()
+	src.writeInfo()
 
 	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "postnumber.json")
 
@@ -225,7 +225,7 @@ func (src StreetAddress) write_postnumber(dir string) {
 		panic(err)
 	}
 
-	var found bool = false
+	var found = false
 	for idx, k := range data {
 		if k.Fi == src.PostalCodeNameFi {
 			data[idx] = k
@@ -251,12 +251,12 @@ func (src StreetAddress) write_postnumber(dir string) {
 }
 
 // Write to file
-func (src StreetAddress) write_municipality(dir string) {
+func (src StreetAddress) writeMunicipality(dir string) {
 	if src.MunicipalityNameFi == "" {
 		return
 	}
 
-	src.write_info()
+	src.writeInfo()
 
 	filename := path.Join(dir, src.MunicipalityCode, "municipality.json")
 
@@ -266,7 +266,7 @@ func (src StreetAddress) write_municipality(dir string) {
 		panic(err)
 	}
 
-	var found bool = false
+	var found = false
 	for idx, k := range data {
 		if k.Fi == src.MunicipalityNameFi {
 			data[idx] = k
@@ -293,19 +293,19 @@ func (src StreetAddress) write_municipality(dir string) {
 
 func(src *RawLineStructure) ToStreet(converter *iconv.Converter) StreetAddress {
 	smallest := Building{
-		BuildingNumber1:         StringToInt64(BytesToString(src.Smallest_BuildingNumber1[:], converter)),        // 14
-		BuildingDeliveryLetter1: StringToByte(BytesToString(src.Smallest_BuildingDeliveryLetter1[:], converter)), // 15
-		PunctuationMark:         StringToByte(BytesToString(src.Smallest_PunctuationMark[:], converter)),         // 16
-		BuildingNumber2:         StringToInt64(BytesToString(src.Smallest_BuildingNumber2[:], converter)),        // 17
-		BuildingDeliveryLetter2: StringToByte(BytesToString(src.Smallest_BuildingDeliveryLetter2[:], converter)), // 18
+		BuildingNumber1:         StringToInt64(BytesToString(src.SmallestBuildingNumber1[:], converter)),        // 14
+		BuildingDeliveryLetter1: StringToByte(BytesToString(src.SmallestBuildingDeliveryLetter1[:], converter)), // 15
+		PunctuationMark:         StringToByte(BytesToString(src.SmallestPunctuationMark[:], converter)),         // 16
+		BuildingNumber2:         StringToInt64(BytesToString(src.SmallestBuildingNumber2[:], converter)),        // 17
+		BuildingDeliveryLetter2: StringToByte(BytesToString(src.SmallestBuildingDeliveryLetter2[:], converter)), // 18
 	}
 
 	highest := Building{
-		BuildingNumber1:         StringToInt64(BytesToString(src.Highest_BuildingNumber1[:], converter)),        // 20
-		BuildingDeliveryLetter1: StringToByte(BytesToString(src.Highest_BuildingDeliveryLetter1[:], converter)), // 21
-		PunctuationMark:         StringToByte(BytesToString(src.Highest_PunctuationMark[:], converter)),         // 22
-		BuildingNumber2:         StringToInt64(BytesToString(src.Highest_BuildingNumber2[:], converter)),        // 23
-		BuildingDeliveryLetter2: StringToByte(BytesToString(src.Highest_BuildingDeliveryLetter2[:], converter)), // 24
+		BuildingNumber1:         StringToInt64(BytesToString(src.HighestBuildingNumber1[:], converter)),        // 20
+		BuildingDeliveryLetter1: StringToByte(BytesToString(src.HighestBuildingDeliveryLetter1[:], converter)), // 21
+		PunctuationMark:         StringToByte(BytesToString(src.HighestPunctuationMark[:], converter)),         // 22
+		BuildingNumber2:         StringToInt64(BytesToString(src.HighestBuildingNumber2[:], converter)),        // 23
+		BuildingDeliveryLetter2: StringToByte(BytesToString(src.HighestBuildingDeliveryLetter2[:], converter)), // 24
 	}
 
 	p := StreetAddress{
@@ -347,12 +347,12 @@ func ConvertFile(sourcefile string, targetdir string) (err error){
 	buffer := make([]byte, binary.Size(raw))
 	nl := make([]byte, 1) // new line
 
-	finfo, err := f.Stat()
+	fInfo, err := f.Stat()
 	if err != nil {
 		return err
 	}
 
-	var sourceTotalSizeBytes int64 = finfo.Size()
+	var sourceTotalSizeBytes = fInfo.Size()
 	var sourceReadedBytes int64 = 0
 
 	// Ticker for stats
@@ -372,6 +372,8 @@ func ConvertFile(sourcefile string, targetdir string) (err error){
 
 		// Read from file
 		r := bytes.NewReader(buffer)
+
+		// Get position
 		pos, err := f.Seek(0, io.SeekCurrent)
 		if err != nil {
 			return err
@@ -385,13 +387,12 @@ func ConvertFile(sourcefile string, targetdir string) (err error){
 			return err
 		}
 
-		// Convert to proper structs
-
+		// Convert to proper struct
 		p := raw.ToStreet(converter)
 
-		p.write_street(targetdir)
-		p.write_postnumber(targetdir)
-		p.write_municipality(targetdir)
+		p.writeStreet(targetdir)
+		p.writePostnumber(targetdir)
+		p.writeMunicipality(targetdir)
 
 		// Report stats
 		select {

@@ -11,8 +11,8 @@ import (
 func main() {
 	var err error
 
-	sourcefile := flag.String("f", "", "File name (BAF_yyyymmdd.dat)")
-	outputdirectory := flag.String("o", "", "Output directory /home/user/jsonfiles")
+	sourceFile := flag.String("f", "", "File name (BAF_yyyymmdd.dat)")
+	outputDirectory := flag.String("o", "", "Output directory /home/user/jsonfiles")
 
 	flag.Parse()
 
@@ -29,11 +29,11 @@ func main() {
 		os.Exit(2)
 	}
 
-	_, err = os.Stat(*sourcefile)
+	_, err = os.Stat(*sourceFile)
 
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "File not found: '%v'", *sourcefile)
+			fmt.Fprintf(os.Stderr, "File not found: '%v'", *sourceFile)
 			os.Exit(2)
 		} else {
 			panic(err)
@@ -41,12 +41,12 @@ func main() {
 
 	}
 
-	log.Printf("Source file: '%s'", *sourcefile)
-	log.Printf("Output directory: '%s'", *outputdirectory)
+	log.Printf("Source file: '%s'", *sourceFile)
+	log.Printf("Output directory: '%s'", *outputDirectory)
 
 	starttime := time.Now().UTC()
 
-	err = ConvertFile(*sourcefile, *outputdirectory)
+	err = ConvertFile(*sourceFile, *outputDirectory)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: '%v'", err)
 	}

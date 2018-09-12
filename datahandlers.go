@@ -1,63 +1,30 @@
 package main
 
 import (
-	"path"
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
-	"log"
-	"io/ioutil"
-	"os"
-	"strings"
-	"io"
 	"errors"
 	"github.com/djimenez/iconv-go"
-	"encoding/binary"
-	"bytes"
+	"github.com/spf13/afero"
+	"io"
+	"io/ioutil"
+	"log"
+	"os"
+	"path"
+	"runtime"
+	"strings"
 	"time"
 )
-
-// Basic Address File Record Description
-// Raw data
-type RawLineStructure struct {
-	RecordIdentifier      [5]byte  // #1 Record identifier, "KATUN"
-	RunningDate           [8]byte  // #2 Running date, numeric date yyyymmdd
-	PostalCode            [5]byte  // #3 Postal code, numeric
-	PostalCodeNameFi      [30]byte // #4 Postal code name in Finnish
-	PostalCodeNameSe      [30]byte // #5 Postal code name in Swedish, optional
-	PostalCodeShortNameFi [12]byte // #6 Postal code name abbreviation in Finnish
-	PostalCodeShortNameSe [12]byte // #7 Postal code name abbreviation in Swedish, optional
-	StreetNameFi          [30]byte // #8 Street (location) name in Finnish
-	StreetNameSe          [30]byte // #9 Street (location) name in Swedish, optional
-	Blank1                [12]byte // #10 Blank
-	Blank2                [12]byte // #11 Blank
-	BuildingDataType      [1]byte  // #12 Building data type, 1 = odd 2 = even
-
-	// #13 (skipped) Smallest building number (information about an odd/even building)
-	SmallestBuildingNumber1         [5]byte // #14 Building number 1, optional
-	SmallestBuildingDeliveryLetter1 [1]byte // #15 Building delivery letter 1, optional
-	SmallestPunctuationMark         [1]byte // #16 Punctuation mark, optional
-	SmallestBuildingNumber2         [5]byte // #17 Building number 2, optional
-	SmallestBuildingDeliveryLetter2 [1]byte // #18 Building delivery letter 2, optional
-
-	// #19 (skipped) Highest building number (information about an odd/even building)
-	HighestBuildingNumber1         [5]byte // #20 Building number 1, optional
-	HighestBuildingDeliveryLetter1 [1]byte // #21 Building delivery letter 1, optional
-	HighestPunctuationMark         [1]byte // #22 Punctuation mark, optional
-	HighestBuildingNumber2         [5]byte // #23 Building number 2, optional
-	HighestBuildingDeliveryLetter2 [1]byte // #24 Building delivery letter 2, optional
-
-	MunicipalityCode   [3]byte  // #25 Municipality code, numeric
-	MunicipalityNameFi [20]byte // #26 Municipality name in Finnish
-	MunicipalityNameSe [20]byte // #27 Municipality name in Swedish, optional
-}
 
 // structured
 type EvenOdd uint8 // #12 Even / odd
 
 // #12 Even / odd
 const (
-	NOTUSED EvenOdd = 0
-	ODD     EvenOdd = 1
-	EVEN    EvenOdd = 2
+	NOTUSED EvenOdd = iota
+	ODD
+	EVEN
 )
 
 type Building struct {
@@ -90,28 +57,8 @@ type StreetAddress struct {
 	MunicipalityNameSe string // #27 Municipality name in Swedish
 }
 
-// JSON structures
-
-type StreetJSON struct {
-	Fi  string `json:"fi,omitempty"`  // Street name in Finnish
-	Se  string `json:"se,omitempty"`  // Street name in Swedish
-	Min int64  `json:"min,omitempty"` // Minimum number
-	Max int64  `json:"max,omitempty"` // Maximum number
-}
-
-type PostnumberJSON struct {
-	Fi    string `json:"fi,omitempty"`  // Post number name in Finnish
-	Se    string `json:"se,omitempty"`  // Post number name in Swedish
-	FiLyh string `json:"fil,omitempty"` // Shortened post number name in Finnish
-	SeLyh string `json:"sel,omitempty"` // Shortened post number name in Swedish
-}
-
-type MunicipalityJSON struct {
-	Fi string `json:"fi,omitempty"` // Municipality name in Finnish
-	Se string `json:"se,omitempty"` // Municipality name in Swedish
-}
-
 // Converters
+
 func StringToEvenOddConst(s string) EvenOdd {
 	if s == "1" {
 		return ODD
@@ -129,169 +76,7 @@ func (src StreetAddress) StreetNumberMinMax(arr []int64) (min int64, max int64) 
 	return GetMinMaxArray(numbers, -1)
 }
 
-// Street address JSON
-func (src StreetAddress) NewStreetJSON() StreetJSON {
-	min, max := src.StreetNumberMinMax([]int64{})
-
-	return StreetJSON{
-		Fi:  src.StreetNameFi,
-		Se:  src.StreetNameSe,
-		Min: min,
-		Max: max,
-	}
-}
-
-// Post number 
-func (src StreetAddress) NewPostnumberJSON() PostnumberJSON {
-	return PostnumberJSON{
-		Fi:    src.PostalCodeNameFi,
-		Se:    src.PostalCodeNameSe,
-		FiLyh: src.PostalCodeShortNameFi,
-		SeLyh: src.PostalCodeShortNameSe,
-	}
-}
-
-// Municipality
-func (src StreetAddress) NewMunicipalityJSON() MunicipalityJSON {
-	return MunicipalityJSON{
-		Fi: src.MunicipalityNameFi,
-		Se: src.MunicipalityNameSe,
-	}
-}
-
-// Possible debug info
-func (src StreetAddress) writeInfo() {
-	//log.Printf("%s (%s) %s (%s) %s\n", src.MunicipalityNameFi, src.MunicipalityCode, src.PostalCodeNameFi, src.PostalCode, src.StreetNameFi)
-}
-
-// Write to file
-func (src StreetAddress) writeStreet(dir string) {
-
-	if src.StreetNameFi == "" {
-		return
-	}
-
-	src.writeInfo()
-
-	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "street.json")
-
-	var data []StreetJSON
-	err := UnmarshalJSONFromFile(filename, &data)
-	if err != nil {
-		panic(err)
-	}
-
-	var found = false
-	for idx, k := range data {
-		if k.Fi == src.StreetNameFi {
-			min, max := src.StreetNumberMinMax([]int64{k.Min, k.Max})
-			k.Min = min
-			k.Max = max
-			data[idx] = k
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		data = append(data, src.NewStreetJSON())
-	}
-
-	writeBytes, err := json.Marshal(data)
-	if err != nil {
-		panic(err)
-	}
-
-	err = ioutil.WriteFile(filename, writeBytes, os.FileMode(0600))
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-// Write to file
-func (src StreetAddress) writePostnumber(dir string) {
-	if src.PostalCodeNameFi == "" {
-		return
-	}
-
-	src.writeInfo()
-
-	filename := path.Join(dir, src.MunicipalityCode, src.PostalCode, "postnumber.json")
-
-	var data []PostnumberJSON
-	err := UnmarshalJSONFromFile(filename, &data)
-	if err != nil {
-		panic(err)
-	}
-
-	var found = false
-	for idx, k := range data {
-		if k.Fi == src.PostalCodeNameFi {
-			data[idx] = k
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		data = append(data, src.NewPostnumberJSON())
-	}
-
-	writebytes, err := json.Marshal(data)
-	if err != nil {
-		panic(err)
-	}
-
-	err = ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-// Write to file
-func (src StreetAddress) writeMunicipality(dir string) {
-	if src.MunicipalityNameFi == "" {
-		return
-	}
-
-	src.writeInfo()
-
-	filename := path.Join(dir, src.MunicipalityCode, "municipality.json")
-
-	var data []MunicipalityJSON
-	err := UnmarshalJSONFromFile(filename, &data)
-	if err != nil {
-		panic(err)
-	}
-
-	var found = false
-	for idx, k := range data {
-		if k.Fi == src.MunicipalityNameFi {
-			data[idx] = k
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		data = append(data, src.NewMunicipalityJSON())
-	}
-
-	writebytes, err := json.Marshal(data)
-	if err != nil {
-		panic(err)
-	}
-
-	err = ioutil.WriteFile(filename, writebytes, os.FileMode(0600))
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-func(src *RawLineStructure) ToStreet(converter *iconv.Converter) StreetAddress {
+func (src *RawLineStructure) ToStreet(converter *iconv.Converter) StreetAddress {
 	smallest := Building{
 		BuildingNumber1:         StringToInt64(BytesToString(src.SmallestBuildingNumber1[:], converter)),        // 14
 		BuildingDeliveryLetter1: StringToByte(BytesToString(src.SmallestBuildingDeliveryLetter1[:], converter)), // 15
@@ -328,7 +113,7 @@ func(src *RawLineStructure) ToStreet(converter *iconv.Converter) StreetAddress {
 }
 
 // Convert file to multiple JSON files
-func ConvertFile(sourcefile string, targetdir string) (err error){
+func ConvertFile(sourcefile string, targetdir string) (err error) {
 	converter, err := iconv.NewConverter("iso-8859-1", "utf-8")
 	if err != nil {
 		return err
@@ -340,7 +125,6 @@ func ConvertFile(sourcefile string, targetdir string) (err error){
 	if err != nil {
 		return err
 	}
-
 
 	var raw RawLineStructure
 
@@ -359,8 +143,13 @@ func ConvertFile(sourcefile string, targetdir string) (err error){
 	ticker := time.NewTicker(time.Second * 1)
 	defer ticker.Stop()
 
-	for {
+	// Create new in-memory filesystem
+	fSystem := &afero.Afero{
+		Fs: afero.NewMemMapFs(),
+	}
 
+	// Read source file line by line
+	for {
 		_, err := f.Read(buffer)
 		if err != nil {
 			if err == io.EOF {
@@ -388,19 +177,33 @@ func ConvertFile(sourcefile string, targetdir string) (err error){
 		}
 
 		// Convert to proper struct
-		p := raw.ToStreet(converter)
+		streetAddr := raw.ToStreet(converter)
 
-		p.writeStreet(targetdir)
-		p.writePostnumber(targetdir)
-		p.writeMunicipality(targetdir)
+		err = ConvertMunicipality(fSystem, streetAddr)
+		if err != nil {
+			panic(err)
+		}
+
+		err = ConvertPostalCode(fSystem, streetAddr)
+		if err != nil {
+			panic(err)
+		}
+
+		err = ConvertStreet(fSystem, streetAddr)
+		if err != nil {
+			panic(err)
+		}
 
 		// Report stats
 		select {
 		case <-ticker.C:
-			percent := ( float64(sourceReadedBytes) * float64(100.0) ) / float64(sourceTotalSizeBytes)
+			percent := (float64(sourceReadedBytes) * float64(100.0)) / float64(sourceTotalSizeBytes)
 			log.Printf("%v / %v %07.3f%%", sourceReadedBytes, sourceTotalSizeBytes, percent)
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			log.Printf(`%v %v`, bytesToHuman(m.Alloc), bytesToHuman(m.TotalAlloc))
 		default:
-			// do nothing
+
 		}
 
 		_, err = f.Read(nl)
@@ -417,6 +220,236 @@ func ConvertFile(sourcefile string, targetdir string) (err error){
 			return errors.New("Not newline")
 		}
 
+	}
+
+	log.Printf(`Generating directories..`)
+	// Create directories
+	err = fSystem.Walk(`/`, func(filepath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			// Skip files
+			return nil
+		}
+
+		dirPath := path.Join(targetdir, filepath)
+
+		err = os.MkdirAll(dirPath, os.FileMode(0700))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Memory files to actual files
+	log.Printf(`Saving files..`)
+	err = fSystem.Walk(`/`, func(filepath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			// Skip directories
+			return nil
+		}
+
+		b, err := fSystem.ReadFile(filepath)
+		if err != nil {
+			return err
+		}
+
+		dirPath := path.Join(targetdir, filepath)
+		err = ioutil.WriteFile(dirPath, b, os.FileMode(0600))
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return nil
+}
+
+type PostnumberJSON struct {
+	Fi    string `json:"fi,omitempty"`  // Post number name in Finnish
+	Se    string `json:"se,omitempty"`  // Post number name in Swedish
+	FiLyh string `json:"fil,omitempty"` // Shortened post number name in Finnish
+	SeLyh string `json:"sel,omitempty"` // Shortened post number name in Swedish
+}
+
+func ConvertFromFile(fName string, fs *afero.Afero, v interface{}) error {
+	_, err := fs.Stat(fName)
+	if err != nil {
+		if os.IsNotExist(err) {
+			f, err := fs.Create(fName)
+			if err != nil {
+				return err
+			}
+
+			f.WriteString(`[]`) // Empty array
+			f.Close()
+		} else {
+			return err
+		}
+	}
+
+	b, err := fs.ReadFile(fName)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal(b, &v)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+func ConvertPostalCode(fs *afero.Afero, addr StreetAddress) error {
+	fName := path.Join(string(os.PathSeparator), addr.MunicipalityCode, addr.PostalCode, `postnumber.json`)
+
+	var data []PostnumberJSON
+
+	err := ConvertFromFile(fName, fs, &data)
+	if err != nil {
+		return err
+	}
+
+	var found = false
+	for idx, k := range data {
+		if k.Fi == addr.PostalCodeNameFi {
+			data[idx] = k
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		data = append(data, PostnumberJSON{
+			Fi:    addr.PostalCodeNameFi,
+			FiLyh: addr.PostalCodeShortNameFi,
+			Se:    addr.PostalCodeNameSe,
+			SeLyh: addr.PostalCodeShortNameSe,
+		})
+	}
+
+	err = SaveData(fs, fName, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SaveData(fs *afero.Afero, s string, v interface{}) error {
+	writebytes, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	err = fs.WriteFile(s, writebytes, os.FileMode(0600))
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}
+
+type MunicipalityJSON struct {
+	Fi string `json:"fi,omitempty"` // Municipality name in Finnish
+	Se string `json:"se,omitempty"` // Municipality name in Swedish
+}
+
+func ConvertMunicipality(fs *afero.Afero, addr StreetAddress) error {
+	fName := path.Join(string(os.PathSeparator), addr.MunicipalityCode, `municipality.json`)
+
+	var data []MunicipalityJSON
+
+	err := ConvertFromFile(fName, fs, &data)
+	if err != nil {
+		return err
+	}
+
+	var found = false
+	for idx, k := range data {
+		if k.Fi == addr.MunicipalityNameFi {
+			data[idx] = k
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		data = append(data, MunicipalityJSON{
+			Fi: addr.MunicipalityNameFi,
+			Se: addr.MunicipalityNameSe,
+		})
+	}
+
+	err = SaveData(fs, fName, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type StreetJSON struct {
+	Fi  string `json:"fi,omitempty"`  // Street name in Finnish
+	Se  string `json:"se,omitempty"`  // Street name in Swedish
+	Min int64  `json:"min,omitempty"` // Minimum number
+	Max int64  `json:"max,omitempty"` // Maximum number
+}
+
+func ConvertStreet(fs *afero.Afero, addr StreetAddress) error {
+	if addr.StreetNameFi == `` {
+		return nil
+	}
+
+	fName := path.Join(string(os.PathSeparator), addr.MunicipalityCode, addr.PostalCode, `street.json`)
+
+	var data []StreetJSON
+
+	err := ConvertFromFile(fName, fs, &data)
+	if err != nil {
+		return err
+	}
+
+	var found = false
+	for idx, k := range data {
+		if k.Fi == addr.StreetNameFi {
+			min, max := addr.StreetNumberMinMax([]int64{k.Min, k.Max})
+			k.Min = min
+			k.Max = max
+			data[idx] = k
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		min, max := addr.StreetNumberMinMax([]int64{})
+		data = append(data, StreetJSON{
+			Fi:  addr.StreetNameFi,
+			Se:  addr.StreetNameSe,
+			Min: min,
+			Max: max,
+		})
+	}
+
+	err = SaveData(fs, fName, data)
+	if err != nil {
+		return err
 	}
 
 	return nil

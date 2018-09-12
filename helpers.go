@@ -1,14 +1,12 @@
 package main
 
 import (
-	"github.com/djimenez/iconv-go"
-	"strings"
-	"os"
-	"strconv"
-	"path"
-	"encoding/json"
-	"fmt"
 	"errors"
+	"fmt"
+	"github.com/djimenez/iconv-go"
+	"math"
+	"strconv"
+	"strings"
 )
 
 func StringToInt64(s string) int64 {
@@ -91,39 +89,6 @@ func GetMinMaxArray(arr []int64, filter int64) (min int64, max int64) {
 	return MinMaxArray(newarr)
 }
 
-// Read JSON file to struct
-func UnmarshalJSONFromFile(filepath string, v interface{}) (err error) {
-	err = os.MkdirAll(path.Dir(filepath), os.FileMode(0700))
-	if err != nil {
-		return err
-	}
-
-	// create file if not exists
-	_, err = os.Stat(filepath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			file, err := os.Create(filepath)
-			defer file.Close()
-			if err != nil {
-				return err
-			}
-
-			// Empty array
-			file.Write([]byte("[]"))
-		} else {
-			return err
-		}
-	}
-
-	file, err := os.Open(filepath)
-	defer file.Close()
-	if err != nil {
-		return err
-	}
-
-	return json.NewDecoder(file).Decode(v)
-}
-
 func HasRequiredCommandLineArguments(required []string, seen map[string]bool) (err error) {
 	err = nil
 	var errs []string
@@ -138,4 +103,25 @@ func HasRequiredCommandLineArguments(required []string, seen map[string]bool) (e
 	}
 
 	return err
+}
+
+// Convert 1024 to '1 KiB' etc
+func bytesToHuman(src uint64) string {
+	if src < 10 {
+		return fmt.Sprintf("%d B", src)
+	}
+
+	s := float64(src)
+	base := float64(1024)
+	sizes := []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"}
+
+	e := math.Floor(math.Log(s) / math.Log(base))
+	suffix := sizes[int(e)]
+	val := math.Floor(s/math.Pow(base, e)*10+0.5) / 10
+	f := "%.0f %s"
+	if val < 10 {
+		f = "%.1f %s"
+	}
+
+	return fmt.Sprintf(f, val, suffix)
 }

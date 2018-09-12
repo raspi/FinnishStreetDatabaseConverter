@@ -2,12 +2,12 @@
   <configuration default="false" name="converter" type="GoApplicationRunConfiguration" factoryName="Go Application" singleton="true">
     <module name="FinnishStreetDatabaseParser" />
     <working_directory value="$PROJECT_DIR$/" />
-    <go_parameters value="-i" />
+    <parameters value="-f $USER_HOME$/tmp/BAF_20180908.dat -o $USER_HOME$/tmp/posti" />
     <kind value="DIRECTORY" />
     <filePath value="$PROJECT_DIR$/main.go" />
     <package value="$PROJECT_DIR$" />
     <directory value="$PROJECT_DIR$/" />
     <output_directory value="$PROJECT_DIR$" />
-    <method />
+    <method v="2" />
   </configuration>
 </component>
